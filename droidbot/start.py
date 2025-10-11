@@ -6,7 +6,7 @@ from . import input_policy
 from . import env_manager
 from .droidbot import DroidBot
 from .droidmaster import DroidMaster
-
+from .device_abstract import AppiumDevice
 
 def parse_args():
     """
@@ -17,10 +17,12 @@ def parse_args():
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-d", action="store", dest="device_serial", required=False,
                         help="The serial number of target device (use `adb devices` to find)")
-    parser.add_argument("-a", action="store", dest="apk_path", required=True,
-                        help="The file path to target APK")
+    # parser.add_argument("-a", action="store", dest="apk_path", required=True,
+    #                     help="The file path to target APK")
+    parser.add_argument("-a", "--app", required=True, help="Path to .apk or .ipa")
     parser.add_argument("-o", action="store", dest="output_dir",
                         help="directory of output")
+    parser.add_argument("--platform", choices=['android', 'ios'], default='android', help="Platform: android or ios")
     # parser.add_argument("-env", action="store", dest="env_policy",
     #                     help="policy to set up environment. Supported policies:\n"
     #                          "none\tno environment will be set. App will run in default environment of device; \n"
@@ -107,6 +109,31 @@ def main():
     if not opts.output_dir and opts.cv_mode:
         print("To run in CV mode, you need to specify an output dir (using -o option).")
 
+    # Initialize device based on platform
+    if opts.platform == 'ios':
+        caps = {
+            'deviceName': 'iPhone SE',  # Adjust to your simulator
+            'platformVersion': '17.0',  # Match your simulator version
+            'automationName': 'XCUITest',
+            'newCommandTimeout': 600,
+            'app': opts.app
+            # For facebook++.ipa, add if signed:
+            # 'xcodeOrgId': '<your-team-id>',
+            # 'xcodeSigningId': 'iPhone Developer'
+        }
+        device = AppiumDevice(platform='ios', app_path=opts.app, **caps)
+    else:
+        # Use Appium for Android for consistency, or revert to original Device
+        caps = {
+            'deviceName': opts.device_serial or 'emulator-5554',  # Default emulator
+            'platformVersion': '10',  # Adjust as needed
+            'automationName': 'UiAutomator2',
+            'newCommandTimeout': 600,
+            'app': opts.app
+        }
+        device = AppiumDevice(platform='android', app_path=opts.app, **caps)
+        # Alternative: device = Device(app_path=opts.app, device_serial=opts.device_serial)
+    
     if opts.distributed:
         if opts.distributed == "master":
             start_mode = "master"
@@ -165,7 +192,8 @@ def main():
             master=opts.master,
             humanoid=opts.humanoid,
             ignore_ad=opts.ignore_ad,
-            replay_output=opts.replay_output)
+            replay_output=opts.replay_output,
+            device=device)
         droidbot.start()
     return
 

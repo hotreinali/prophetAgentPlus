@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import logging
 import random
@@ -133,12 +134,115 @@ class UtgBasedInputPolicy(InputPolicy):
             self.humanoid_view_trees = []
             self.humanoid_events = []
 
+    # def generate_event(self):
+    #     """
+    #     generate an event
+    #     @return:
+    #     """
+
+    #     # Get current device state
+    #     self.current_state = self.device.get_current_state()
+    #     if self.current_state is None:
+    #         import time
+    #         time.sleep(5)
+    #         return KeyEvent(name="BACK")
+
+    #     self.__update_utg()
+
+    #     # update last view trees for humanoid
+    #     if self.device.humanoid is not None:
+    #         self.humanoid_view_trees = self.humanoid_view_trees + [self.current_state.view_tree]
+    #         if len(self.humanoid_view_trees) > 4:
+    #             self.humanoid_view_trees = self.humanoid_view_trees[1:]
+
+    #     event = None
+
+    #     # if the previous operation is not finished, continue
+    #     if len(self.script_events) > self.script_event_idx:
+    #         event = self.script_events[self.script_event_idx].get_transformed_event(self)
+    #         self.script_event_idx += 1
+
+    #     # First try matching a state defined in the script
+    #     if event is None and self.script is not None:
+    #         operation = self.script.get_operation_based_on_state(self.current_state)
+    #         if operation is not None:
+    #             self.script_events = operation.events
+    #             # restart script
+    #             event = self.script_events[0].get_transformed_event(self)
+    #             self.script_event_idx = 1
+
+    #     if event is None:
+    #         event = self.generate_event_based_on_utg()
+
+    #     # update last events for humanoid
+    #     if self.device.humanoid is not None:
+    #         self.humanoid_events = self.humanoid_events + [event]
+    #         if len(self.humanoid_events) > 3:
+    #             self.humanoid_events = self.humanoid_events[1:]
+
+    #     self.last_state = self.current_state
+    #     self.last_event = event
+    #     return event
+    
+    # def generate_event(self):
+    #     """
+    #     generate an event
+    #     @return:
+    #     """
+    #     # Get current device state
+    #     self.current_state = self.device.get_current_state()
+    #     if self.current_state is None:
+    #         import time
+    #         time.sleep(5)
+    #         return KeyEvent(name="BACK")
+
+    #     # Add feedback for current page
+    #     page_name = self._identify_page(self.current_state)
+    #     self.logger.info(f"current page: {page_name}")
+
+    #     self.__update_utg()
+
+    #     # update last view trees for humanoid
+    #     if self.device.humanoid is not None:
+    #         self.humanoid_view_trees = self.humanoid_view_trees + [self.current_state.view_tree]
+    #         if len(self.humanoid_view_trees) > 4:
+    #             self.humanoid_view_trees = self.humanoid_view_trees[1:]
+
+    #     event = None
+
+    #     # if the previous operation is not finished, continue
+    #     if len(self.script_events) > self.script_event_idx:
+    #         event = self.script_events[self.script_event_idx].get_transformed_event(self)
+    #         self.script_event_idx += 1
+
+    #     # First try matching a state defined in the script
+    #     if event is None and self.script is not None:
+    #         operation = self.script.get_operation_based_on_state(self.current_state)
+    #         if operation is not None:
+    #             self.script_events = operation.events
+    #             # restart script
+    #             event = self.script_events[0].get_transformed_event(self)
+    #             self.script_event_idx = 1
+
+    #     if event is None:
+    #         event = self.generate_event_based_on_utg()
+
+    #     # update last events for humanoid
+    #     if self.device.humanoid is not None:
+    #         self.humanoid_events = self.humanoid_events + [event]
+    #         if len(self.humanoid_events) > 3:
+    #             self.humanoid_events = self.humanoid_events[1:]
+
+    #     self.last_state = self.current_state
+    #     self.last_event = event
+    #     return event
+    
+
     def generate_event(self):
         """
         generate an event
         @return:
         """
-
         # Get current device state
         self.current_state = self.device.get_current_state()
         if self.current_state is None:
@@ -146,17 +250,40 @@ class UtgBasedInputPolicy(InputPolicy):
             time.sleep(5)
             return KeyEvent(name="BACK")
 
+        # Log current state and views
+        page_name = self.current_state.foreground_activity
+        self.logger.info(f"Current page: {page_name}")
+        self.logger.info(f"State ID: {self.current_state.state_str}")  # Log state identifier (may be hashed)
+        
+        # Log view tree
+        view_tree = self.current_state.view_tree
+        self.logger.info(f"View tree: {json.dumps(view_tree, indent=2)}")
+        
+        # Save view tree to file for later inspection
+        output_dir = self.output_dir if hasattr(self, 'output_dir') else "output_dir"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        state_file = os.path.join(output_dir, f"state_{page_name.replace('/', '_')}_{self.current_state.state_str}.json")
+        with open(state_file, 'w') as f:
+            json.dump({
+                "activity": page_name,
+                "state_id": self.current_state.state_str,
+                "view_tree": view_tree
+            }, f, indent=2)
+        self.logger.info(f"Saved state and views to: {state_file}")
+
         self.__update_utg()
 
-        # update last view trees for humanoid
+        # Update last view trees for humanoid
         if self.device.humanoid is not None:
             self.humanoid_view_trees = self.humanoid_view_trees + [self.current_state.view_tree]
             if len(self.humanoid_view_trees) > 4:
                 self.humanoid_view_trees = self.humanoid_view_trees[1:]
+            self.logger.info(f"Humanoid view trees: {len(self.humanoid_view_trees)} stored")
 
         event = None
 
-        # if the previous operation is not finished, continue
+        # If the previous operation is not finished, continue
         if len(self.script_events) > self.script_event_idx:
             event = self.script_events[self.script_event_idx].get_transformed_event(self)
             self.script_event_idx += 1
@@ -166,14 +293,14 @@ class UtgBasedInputPolicy(InputPolicy):
             operation = self.script.get_operation_based_on_state(self.current_state)
             if operation is not None:
                 self.script_events = operation.events
-                # restart script
+                # Restart script
                 event = self.script_events[0].get_transformed_event(self)
                 self.script_event_idx = 1
 
         if event is None:
             event = self.generate_event_based_on_utg()
 
-        # update last events for humanoid
+        # Update last events for humanoid
         if self.device.humanoid is not None:
             self.humanoid_events = self.humanoid_events + [event]
             if len(self.humanoid_events) > 3:
@@ -183,6 +310,67 @@ class UtgBasedInputPolicy(InputPolicy):
         self.last_event = event
         return event
 
+    def _identify_page(self, state):
+        """
+        Identify the current page based on the state
+        @param state: DeviceState
+        @return: str, name of the page
+        """
+        if state is None or not hasattr(state, 'foreground_activity') or not state.foreground_activity:
+            return "unknown"
+
+        activity_name = state.foreground_activity.lower()
+        # Simple heuristic: check if "login" is in the activity name
+        if "login" in activity_name:
+            return "login"
+
+        # Check views for login-related elements, skipping None entries
+        if hasattr(state, 'views') and state.views:
+            for view in state.views:
+                if view is None:  # Skip None entries
+                    continue
+                view_text = view.get('text', '')
+                if view_text and isinstance(view_text, str):  # Ensure text is a string
+                    view_text = view_text.lower()
+                    if "username" in view_text or "password" in view_text or "sign in" in view_text:
+                        return "login"
+
+        # Fallback to activity name or a generic identifier
+        return activity_name.split('.')[-1] if '.' in activity_name else activity_name
+
+    def _identify_action(self, event):
+        """
+        Identify the action based on the event
+        @param event: InputEvent
+        @return: str, description of the action
+        """
+        if isinstance(event, TouchEvent) and event.view is not None:
+            view = event.view
+            view_text = view.get('text', '')
+            view_class = view.get('class', '')
+            view_resource_id = view.get('resource_id', '')
+            # Ensure text and resource_id are strings before calling lower()
+            view_text = view_text.lower() if isinstance(view_text, str) else ''
+            view_resource_id = view_resource_id.lower() if isinstance(view_resource_id, str) else ''
+            # Check for login button based on text, class, or resource ID
+            if ("login" in view_text or "sign in" in view_text or
+                    "login" in view_resource_id or "signin" in view_resource_id or
+                    view_class.endswith('Button')):
+                return "Pressed login button"
+            return f"Pressed view with text '{view_text}'" if view_text else "Pressed view"
+        elif isinstance(event, KeyEvent):
+            return f"Pressed key '{event.name}'"
+        elif isinstance(event, IntentEvent):
+            return "Sent intent"
+        elif isinstance(event, SetTextEvent):
+            return f"Set text '{event.text}'"
+        elif isinstance(event, ManualEvent):
+            return "Manual action"
+        elif isinstance(event, KillAppEvent):
+            return "Killed app"
+        else:
+            return "Unknown action"
+    
     def __update_utg(self):
         self.utg.add_transition(self.last_event, self.last_state, self.current_state)
 

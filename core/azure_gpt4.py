@@ -153,12 +153,13 @@ def ask_gpt4o(system_prompt, user_prompt, images: List[str], need_json=True) -> 
             )
 
             response_text = completion.choices[0].message.content
-            print(response_text)
+            print("--Response Text--: \n" + response_text)
             if not need_json:
                 return response_text
             else:
-                pattern = r'\{[^}]*\}'
+                pattern = r'```json\s*([\s\S]*?)\s*```'
                 matches = re.findall(pattern, response_text)
+                print("---match---\n"+matches[0])
                 if matches:
                     return json.loads(matches[0])
                 else:

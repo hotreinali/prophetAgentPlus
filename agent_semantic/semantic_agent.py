@@ -70,7 +70,7 @@ class SemanticAgent:
         # 查找 "view_" 和 ".png" 的开始索引
         start_index = filename.find("view_")
         # real device use png
-        end_index = filename.find(".png", start_index)
+        end_index = filename.find(".jpg", start_index)
 
         if start_index != -1 and end_index != -1:
             # 调整start_index到"view_"之后的字符
@@ -81,7 +81,7 @@ class SemanticAgent:
             return "No match found"
 
     def load_figure(self, path):
-        views_path = os.path.join(path, "output_dir", "views")
+        views_path = os.path.join(path, "output_joplin", "views")
         print("Looking for views in:", views_path)
 
         for pic in os.listdir(views_path):
@@ -91,6 +91,9 @@ class SemanticAgent:
 
     def execute_description(self, event_data, event_info, json_path):
         view_hash = event_info['view']['view_str']
+        print(f"DEBUG view_hash={view_hash}")
+        # print(f"DEBUG available figure_dict keys={list(figure_dict.keys())[:10]}")
+
         figure_path = ""
         if view_hash in figure_dict:
             figure_path = figure_dict[view_hash]
@@ -110,8 +113,8 @@ class SemanticAgent:
         xml_pre = event_data['start_xml']
         xml_after = event_data['stop_xml']
         try:
-            xml_pre_reduced = ui_xml_tree.process(self.select_target_root_node(xml_pre), app_name="AnkiDroid", level=1, str_type="plain_text", remove_system_bar=True, use_bounds=False, merge_switch=False)
-            xml_after_reduced = ui_xml_tree.process(self.select_target_root_node(xml_after), app_name="AnkiDroid", level=1, str_type="plain_text", remove_system_bar=True, use_bounds=False, merge_switch=False)
+            xml_pre_reduced = ui_xml_tree.process(self.select_target_root_node(xml_pre), app_name="Joplin", level=1, str_type="plain_text", remove_system_bar=True, use_bounds=False, merge_switch=False)
+            xml_after_reduced = ui_xml_tree.process(self.select_target_root_node(xml_after), app_name="Joplin", level=1, str_type="plain_text", remove_system_bar=True, use_bounds=False, merge_switch=False)
         except Exception as e:
             print(e, json_path)
             return -1
@@ -148,6 +151,9 @@ class SemanticAgent:
             system_prompt = self.get_system_prompt(language, type="click")
         else:
             system_prompt = self.get_system_prompt(language, type="swipe")
+        print(f"DEBUG json_path={json_path}")
+        print(f"DEBUG figure_path={figure_path}")
+
 
         # gpt_out = ask_gpt4_1106(system_prompt, user_prompt, need_json=True, language=language)
         gpt_out = ask_gpt4o(system_prompt, user_prompt, [figure_path])
@@ -191,7 +197,7 @@ class SemanticAgent:
 
     def load_dir_and_execute(self, path, method, graph_name=""):
         index, error_num = 0, 0
-        events_path = os.path.join(path, "output_dir", 'events')
+        events_path = os.path.join(path, "output_joplin", 'events')
         for event in natsorted(os.listdir(events_path)):
             if event.endswith('.json'):
                 json_path = os.path.join(events_path, event)
@@ -261,7 +267,8 @@ if __name__ == '__main__':
     semantic_agent = SemanticAgent()
     # root_path = "Home/output_dir"
     root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    print(root_path)
     semantic_agent.load_figure(root_path)
     semantic_agent.load_dir_and_execute(root_path, "semantic")
     semantic_agent.load_dir_and_execute(root_path, "embedding")
-    semantic_agent.load_dir_and_execute(root_path, "build_graph", "anki")
+    semantic_agent.load_dir_and_execute(root_path, "build_graph", "joplin")

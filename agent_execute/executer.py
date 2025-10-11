@@ -154,8 +154,8 @@ def launch_app(device_id, package_name):
 if __name__ == '__main__':
     device_id = get_device_id()
     root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    apk = os.path.join(root_path, "base.apk")
-    test = os.path.join(root_path, "output_dir/test_cases")
+    apk = "/Users/lareina/Desktop/MCIS/dissertation/prophetAgent/Home/joplin_1.0.329.apk"
+    test = os.path.join(root_path, "test_cases_script")
     # print(r)
     if device_id:
         # please enter your apk and case path
