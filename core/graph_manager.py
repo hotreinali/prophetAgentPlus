@@ -24,6 +24,13 @@ class GraphManager:
         password = config.get('neo4j', 'password')
         # 连接到图形数据库
         self.graph = Graph(uri, user=user, password=password, name=name)
+    
+    def run_query(self, query):
+        result = self.graph.run(query).data()
+        return result
+    
+    def get_all_scene_nodes(self):
+        return self.graph.run("MATCH (s:Scene) RETURN s.hash_id AS hash_id, s.name AS name").data()
 
     def update_node_properties(self, node_type, hash_id, properties):
         """
@@ -194,85 +201,16 @@ class GraphManager:
                 })
 
         return action_info_list
+
+   
     
-    # def get_info_from_action_list(self, action_list):
-    #     """
-    #     根据动作名称列表获取动作信息
-    #     :param action_list: 动作名称列表
-    #     :return: 动作信息列表
-    #     """
-    #     action_info_list = []
-    #     query_template = """
-    #         MATCH (action:Action)
-    #         WHERE toLower(action.name) = toLower($action_name)
-    #         RETURN action.hash_id AS hash_id, action.name AS name, action.description AS description,
-    #             action.element_semantic AS element_semantic, action.bounds AS bounds, action.resource_id AS resource_id
-    #         """
-    #     try:
-    #         for action_name in action_list:
-    #             print_with_color(f"Querying action with name: {action_name}", "cyan")
-    #             result = self.graph.run(query_template, action_name=action_name)
-    #             for record in result:
-    #                 action_info_list.append({
-    #                     "hash_id": record["hash_id"],
-    #                     "name": record["name"],
-    #                     "description": record["description"],
-    #                     "element_semantic": record["element_semantic"],
-    #                     "bounds": record["bounds"],
-    #                     "resource_id": record["resource_id"]
-    #                 })
-    #         return action_info_list
-    #     except Exception as e:
-    #         print_with_color(f"An error occurred: {e}", "red")
-    #         return []
-
-    # def build_graph_node(self, node_info):
-    #     """
-    #     根据节点信息构建节点
-    #     """
-    #     # 根据start_state, action_state, stop_state在neo4j中构图，代表一个场景通过一个动作到达下一个场景，会传入很多个这样的view_info
-    #     # 创建或获取开始场景节点
-    #     start_hash = node_info['start_state']['hash_id']
-    #     end_hash = node_info['stop_state']['hash_id']
-    #     action_str = f"{start_hash}-{end_hash}-{node_info['action_state']['resource_id']}-{node_info['action_state']['event_type']}"
-    #     action_hash = md5(action_str)
-    #     start_node = Node("Scene", hash_id=node_info['start_state']['hash_id'],
-    #                       name=node_info['start_state']['name'],
-    #                       description=node_info['start_state']['description'])
-    #     self.graph.merge(start_node, "Scene", "hash_id")
-
-    #     # 创建或获取结束场景节点
-    #     stop_node = Node("Scene", hash_id=node_info['stop_state']['hash_id'],
-    #                      name=node_info['stop_state']['name'],
-    #                      description=node_info['stop_state']['description'])
-    #     self.graph.merge(stop_node, "Scene", "hash_id")
-
-    #     # 创建或获取动作节点
-    #     action_node = Node("Action", hash_id=action_hash,
-    #                        name=node_info['action_state']['name'],
-    #                        element_semantic=node_info['action_state']['element_semantic'],
-    #                        description=node_info['action_state']['description'],
-    #                        bounds=json.dumps(node_info['action_state']['bounds']),
-    #                        resource_id=node_info['action_state']['resource_id'],
-    #                        event_type=node_info['action_state']['event_type']
-    #                        )
-    #     self.graph.merge(action_node, "Action", "hash_id")
-
-    #     # 创建关系：开始场景到动作
-    #     start_to_action_rel = Relationship(start_node, "LEADS_TO", action_node)
-    #     self.graph.merge(start_to_action_rel)
-
-    #     # 创建关系：动作到结束场景
-    #     action_to_stop_rel = Relationship(action_node, "LEADS_TO", stop_node)
-    #     self.graph.merge(action_to_stop_rel)
-    
-    # def count_relationships(self):
-    #     """
-    #     返回图中所有关系的数量
-    #     """
-    #     query = "MATCH ()-[r]->() RETURN count(r) AS total_relationships"
-    #     result = self.graph.run(query).data()
-    #     return result[0]["total_relationships"]
+    def count_relationships(self):
+        """
+        返回图中所有关系的数量
+        """
+        query = "MATCH ()-[r]->() RETURN count(r) AS total_relationships"
+        result = self.graph.run(query).data()
+        return result[0]["total_relationships"]
     
     def build_graph_node(self, node_info):
         """
