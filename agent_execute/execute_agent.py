@@ -536,6 +536,8 @@ class ExecuteAgent:
 
             Use MATCH to explore relationships up to depth {max_depth}.
             Return only valid Cypher syntax without explanations or markdown.
+            
+            
             """
 
         # Level 2: Structured (explicit and constrained)
@@ -554,7 +556,7 @@ class ExecuteAgent:
 
             Requirements (follow exactly):
             1. Start from the Scene node whose hash_id = "{scene_hash}".
-            2. Use MATCH with non-directional relationships: (-[:LEADS_TO*1..{max_depth}]-).
+            2. Use MATCH with directional relationships: (-[:LEADS_TO*1..{max_depth}]->).
             3. For each path, collect Action names as:
             [n IN nodes(path) WHERE n:Action | n.name] AS actions
             4. Keep only paths with at least one Action node.
@@ -575,22 +577,22 @@ class ExecuteAgent:
             - The LEADS_TO relationship connects Scene → Action and Action → Scene, representing the app’s navigation flow.
             - The graph alternates between Scene and Action nodes.
 
-            Before outputting the query, you may perform **brief internal reasoning** (chain-of-thought) to verify the alternation Scene→Action→Scene and to ensure correct filtering. **Do NOT** output any internal reasoning — only the final Cypher query must be returned.
+            Before outputting the query, you may perform brief internal reasoning (chain-of-thought) to verify the alternation Scene→Action→Scene and to ensure correct filtering. 
+            Do NOT output any internal reasoning — only the final Cypher query must be returned.
 
             Query construction rules (must be followed exactly):
             1. Start from the Scene node whose hash_id = "{scene_hash}".
             2. Use a single MATCH clause to explore relationships up to depth {max_depth}:
-            (-[:LEADS_TO*1..{max_depth}]-)
+            (-[:LEADS_TO*1..{max_depth}]->)
             3. Collect Action node names for each path as:
             [n IN nodes(path) WHERE n:Action | n.name] AS actions
             4. Keep only paths containing at least one Action node:
             WHERE size(actions) > 0
             5. Return two columns: actions and path_len = length(path)
             6. Order by path_len DESC and limit to top {k}
-            7. Use the parameter names exactly: {scene_hash}, {max_depth}, {k} (do not inline runtime values if you plan to send parameterized queries)
-            8. Maintain consistent variable names (start, path, end) or equivalents
-            9. Do not use CALL, apoc, subqueries, or procedural constructs
-            10. Output only the Cypher query as plain text — no explanation, no markdown, no comments.
+            7. Maintain consistent variable names (start, path, end) or equivalents
+            8. Do not use CALL, apoc, subqueries, or procedural constructs
+            9. Output only the Cypher query as plain text — no explanation, no markdown, no comments.
             """
 
         if level == 1:
@@ -623,7 +625,7 @@ class ExecuteAgent:
                 print(scene_hash)
 
                 # Step 2: Ask GPT to generate a Cypher query for this scene
-                prompt = self.build_gpt_prompt(scene_hash, max_depth=max_depth, k=k, level=3)
+                prompt = self.build_gpt_prompt(scene_hash, max_depth=max_depth, k=k, level=2)
                 # print(prompt)
                 print("Asking GPT to write a Cypher query...")
                 gpt_query = ask_gpt4o("", prompt, [], True)
@@ -684,7 +686,7 @@ class ExecuteAgent:
             
             # Step 5: Save to output file
             
-            base_output = "/Users/lareina/Desktop/MCIS/dissertation/prophetAgent/Home/test_cases_gpt_5_mini"
+            base_output = "/Users/lareina/Desktop/MCIS/dissertation/prophetAgent/Home/test_cases_gpt_4o_L2"
             os.makedirs(base_output, exist_ok=True)
             scene_count = {}
 
@@ -721,4 +723,4 @@ if __name__ == '__main__':
     execute_agent.ask_gpt_to_write_query()
     execute_agent.build_pre_data(r)
     print(f"counts of scene:{len(Scene_hash_dict.keys())}, action:{len(Action_hash_dict.keys())}")
-    execute_agent.generate_code_from_cases(os.path.join(root_path, "test_cases_gpt_4o_mini"))
+    execute_agent.generate_code_from_cases(os.path.join(root_path, "test_cases_gpt_4o"))
