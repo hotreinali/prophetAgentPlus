@@ -13,13 +13,14 @@ This project evaluates how different prompt engineering strategies (zero-shot, s
 - Uses LLM-generated Cypher queries to retrieve navigation paths from Neo4j.
 
 2. Prompt Engineering Integration
-| Prompt Levvel | Description | Purpose |
-|-------|-----------|-----------|
+
+| Prompt Level | Description | Purpose |
+|---|---|---|
 | **L1 – Basic (Zero-shot)** | Minimal instructions | Baseline performance |
 | **L2 – Structured (Few-shot)** | Schema rules, directional edges | Improves consistency & validity |
 | **L3 – Context-rich (Chain-of-thought guided)** | Domain context & alternation constraints | Maximizes semantic accuracy |
 
-3. Multi-Model Evaluation
+1. Multi-Model Evaluation
 Evaluated from:
 - GPT-5-mini
 - GPT-4o
